@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>3D Panda Eating Bamboo</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #c8e6c9;
+      font-family: sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #ui {
+      position: absolute;
+      top: 15px;
+      width: 100%;
+      text-align: center;
+      color: #1b5e20;
+      font-size: 1.15rem;
+      font-weight: bold;
+      pointer-events: none;
+      text-shadow: 0 1px 3px rgba(255,255,255,0.9);
+      z-index: 10;
+    }
+    #feedBtn {
+      position: absolute;
+      bottom: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #2e7d32;
+      color: #ffffff;
+      font-size: 1.15rem;
+      font-weight: bold;
+      padding: 14px 32px;
+      border: none;
+      border-radius: 30px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+      cursor: pointer;
+      z-index: 20;
+      outline: none;
+    }
+    #feedBtn:active {
+      background: #1b5e20;
+      transform: translateX(-50%) scale(0.95);
+    }
+  </style>
+</head>
+<body>
+  <div id="ui">Tap the Panda or press the button to feed! 🎋</div>
+  <button id="feedBtn">🎋 FEED BAMBOO</button>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <script>
+    // --- Scene Setup ---
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xd2ebd6);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0, 2.5, 6.5);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    document.body.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.target.set(0, 1.25, 0);
+    controls.maxPolarAngle = Math.PI / 2;
+
+    // --- Lighting ---
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+    const dirLight = new THREE.DirectionalLight(0xfffae0, 0.9);
+    dirLight.position.set(4, 9, 5);
+    dirLight.castShadow = true;
+    scene.add(dirLight);
+
+    // Floor
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(30, 30),
+      new THREE.MeshLambertMaterial({ color: 0xa5d6a7 })
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    // --- Materials ---
+    const whiteMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+    const darkMat = new THREE.MeshLambertMaterial({ color: 0x1a1a1f });
+    const woodMat = new THREE.MeshLambertMaterial({ color: 0x6e3b26 });
+    const bambooMat = new THREE.MeshLambertMaterial({ color: 0x43a047 });
+    const leafMat = new THREE.MeshLambertMaterial({ color: 0x1b5e20 });
+
+    // --- Chair ---
+    const chairGroup = new THREE.Group();
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.2, 2.0), woodMat);
+    seat.position.y = 1;
+    seat.castShadow = true;
+    chairGroup.add(seat);
+
+    const back = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.0, 0.2), woodMat);
+    back.position.set(0, 2.0, -0.9);
+    back.castShadow = true;
+    chairGroup.add(back);
+
+    const legGeo = new THREE.CylinderGeometry(0.09, 0.09, 1);
+    [[-0.9, 0.5, 0.8], [0.9, 0.5, 0.8], [-0.9, 0.5, -0.8], [0.9, 0.5, -0.8]].forEach(p => {
+      const leg = new THREE.Mesh(legGeo, woodMat);
+      leg.position.set(...p);
+      leg.castShadow = true;
+      chairGroup.add(leg);
+    });
+    scene.add(chairGroup);
+
+    // --- Panda Body & Head ---
+    const pandaGroup = new THREE.Group();
+    pandaGroup.position.set(0, 1.1, 0);
+
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.85, 24, 24), whiteMat);
+    body.scale.set(1, 1.1, 0.95);
+    body.position.set(0, 0.7, -0.1);
+    body.castShadow = true;
+    pandaGroup.add(body);
+
+    // Legs
+    const legGeoPanda = new THREE.CylinderGeometry(0.24, 0.26, 0.85, 16);
+    const leftLeg = new THREE.Mesh(legGeoPanda, darkMat);
+    leftLeg.rotation.set(Math.PI / 2, 0, -0.3);
+    leftLeg.position.set(-0.55, 0.25, 0.5);
+    pandaGroup.add(leftLeg);
+
+    const rightLeg = new THREE.Mesh(legGeoPanda, darkMat);
+    rightLeg.rotation.set(Math.PI / 2, 0, 0.3);
+    rightLeg.position.set(0.55, 0.25, 0.5);
+    pandaGroup.add(rightLeg);
+
+    // Head
+    const headGroup = new THREE.Group();
+    headGroup.position.set(0, 1.6, 0);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.65, 24, 24), whiteMat);
+    head.scale.set(1.1, 0.95, 1);
+    head.castShadow = true;
+    headGroup.add(head);
+
+    // Mouth / Snout
+    const mouthGroup = new THREE.Group();
+    mouthGroup.position.set(0, -0.1, 0.6);
+
+    const snout = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 0.25, 16), whiteMat);
+    snout.rotation.x = Math.PI / 2;
+    mouthGroup.add(snout);
+
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 12), darkMat);
+    nose.position.set(0, 0.05, 0.12);
+    mouthGroup.add(nose);
+    headGroup.add(mouthGroup);
+
+    // Eyes
+    const eyePatchGeo = new THREE.BoxGeometry(0.22, 0.3, 0.1);
+    const leftPatch = new THREE.Mesh(eyePatchGeo, darkMat);
+    leftPatch.position.set(-0.25, 0.08, 0.58);
+    leftPatch.rotation.set(0.2, -0.2, -0.3);
+    headGroup.add(leftPatch);
+
+    const rightPatch = new THREE.Mesh(eyePatchGeo, darkMat);
+    rightPatch.position.set(0.25, 0.08, 0.58);
+    rightPatch.rotation.set(0.2, 0.2, 0.3);
+    headGroup.add(rightPatch);
+
+    // Ears
+    const earGeo = new THREE.SphereGeometry(0.2, 16, 16);
+    const leftEar = new THREE.Mesh(earGeo, darkMat);
+    leftEar.position.set(-0.55, 0.5, 0);
+    headGroup.add(leftEar);
+
+    const rightEar = new THREE.Mesh(earGeo, darkMat);
+    rightEar.position.set(0.55, 0.5, 0);
+    headGroup.add(rightEar);
+
+    pandaGroup.add(headGroup);
+
+    // --- ARMS & BAMBOO SYSTEM (PLACED CLEARLY OUTSIDE IN FRONT) ---
+    // Anchored at z = 1.05 so it sits well in front of the panda's belly
+    const handsHoldingGroup = new THREE.Group();
+    handsHoldingGroup.position.set(0, 0.7, 1.05);
+
+    const armGeo = new THREE.CylinderGeometry(0.16, 0.2, 0.75, 16);
+
+    // Right Arm coming forward
+    const rightArmMesh = new THREE.Mesh(armGeo, darkMat);
+    rightArmMesh.position.set(0.42, 0.1, -0.35);
+    rightArmMesh.rotation.set(1.1, 0.2, -0.6);
+    handsHoldingGroup.add(rightArmMesh);
+
+    // Left Arm coming forward
+    const leftArmMesh = new THREE.Mesh(armGeo, darkMat);
+    leftArmMesh.position.set(-0.42, 0.1, -0.35);
+    leftArmMesh.rotation.set(1.1, -0.2, 0.6);
+    handsHoldingGroup.add(leftArmMesh);
+
+    // Right Paw & Left Paw gripping the middle
+    const pawGeo = new THREE.SphereGeometry(0.18, 16, 16);
+    const rightPaw = new THREE.Mesh(pawGeo, darkMat);
+    rightPaw.position.set(0.15, 0, 0);
+    handsHoldingGroup.add(rightPaw);
+
+    const leftPaw = new THREE.Mesh(pawGeo, darkMat);
+    leftPaw.position.set(-0.15, 0, 0);
+    handsHoldingGroup.add(leftPaw);
+
+    // --- BAMBOO STICK (HELD IN THE MIDDLE, COMPLETELY VISIBLE) ---
+    const bambooGroup = new THREE.Group();
+    bambooGroup.position.set(0, 0, 0);
+    bambooGroup.rotation.set(0.15, 0, 0.2); // Tilted naturally
+
+    // Bamboo cylinder centered at y = 0 (1.1m up, 1.1m down)
+    const stickGeo = new THREE.CylinderGeometry(0.085, 0.085, 2.3, 16);
+    const bambooStick = new THREE.Mesh(stickGeo, bambooMat);
+    bambooStick.castShadow = true;
+    bambooGroup.add(bambooStick);
+
+    // Bamboo Segment Rings on Upper and Lower parts
+    const ringGeo = new THREE.TorusGeometry(0.09, 0.02, 8, 16);
+    [-0.9, -0.5, 0.5, 0.9].forEach(y => {
+      const ring = new THREE.Mesh(ringGeo, leafMat);
+      ring.position.y = y;
+      ring.rotation.x = Math.PI / 2;
+      bambooGroup.add(ring);
+    });
+
+    // Upper green leaves
+    for (let i = 0; i < 4; i++) {
+      const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.42, 4), leafMat);
+      leaf.position.set((i % 2 === 0 ? 0.09 : -0.09), 0.5 + i * 0.2, 0);
+      leaf.rotation.set(0, 0, (i % 2 === 0 ? -1.3 : 1.3));
+      bambooGroup.add(leaf);
+    }
+
+    // Lower leaves
+    const bottomLeaf = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.38, 4), leafMat);
+    bottomLeaf.position.set(-0.08, -0.65, 0);
+    bottomLeaf.rotation.set(0, 0, 1.6);
+    bambooGroup.add(bottomLeaf);
+
+    handsHoldingGroup.add(bambooGroup);
+    pandaGroup.add(handsHoldingGroup);
+    scene.add(pandaGroup);
+
+    // --- Bamboo Crumb Particles ---
+    const crumbCount = 14;
+    const crumbGeo = new THREE.DodecahedronGeometry(0.04);
+    const crumbs = [];
+    for (let i = 0; i < crumbCount; i++) {
+      const crumb = new THREE.Mesh(crumbGeo, bambooMat);
+      crumb.visible = false;
+      scene.add(crumb);
+      crumbs.push({ mesh: crumb, vx: 0, vy: 0, vz: 0, life: 0 });
+    }
+
+    function spawnCrumb() {
+      const available = crumbs.find(c => !c.mesh.visible);
+      if (!available) return;
+      available.mesh.visible = true;
+      available.mesh.position.set(
+        (Math.random() - 0.5) * 0.15,
+        2.5 + Math.random() * 0.1,
+        0.85 + (Math.random() - 0.5) * 0.1
+      );
+      available.vx = (Math.random() - 0.5) * 0.04;
+      available.vy = -0.02 - Math.random() * 0.04;
+      available.vz = 0.03 + Math.random() * 0.04;
+      available.life = 30;
+    }
+
+    // --- Animation Controller ---
+    let isEating = false;
+    let eatProgress = 0;
+
+    function startEating() {
+      if (!isEating) {
+        isEating = true;
+        eatProgress = 0;
+      }
+    }
+
+    document.getElementById('feedBtn').addEventListener('click', startEating);
+
+    // Tap/Click Detection
+    let startX = 0, startY = 0;
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      startX = e.clientX;
+      startY = e.clientY;
+    });
+
+    renderer.domElement.addEventListener('pointerup', (e) => {
+      if (Math.abs(e.clientX - startX) < 12 && Math.abs(e.clientY - startY) < 12) {
+        const mouse = new THREE.Vector2(
+          (e.clientX / window.innerWidth) * 2 - 1,
+          -(e.clientY / window.innerHeight) * 2 + 1
+        );
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(mouse, camera);
+        if (raycaster.intersectObjects(pandaGroup.children, true).length > 0) {
+          startEating();
+        }
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // --- Main Render Loop ---
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = clock.getDelta();
+      const time = clock.getElapsedTime();
+
+      // Update crumbs
+      crumbs.forEach(c => {
+        if (c.mesh.visible) {
+          c.mesh.position.x += c.vx;
+          c.mesh.position.y += c.vy;
+          c.mesh.position.z += c.vz;
+          c.life--;
+          if (c.life <= 0 || c.mesh.position.y < 1.1) {
+            c.mesh.visible = false;
+          }
+        }
+      });
+
+      if (isEating) {
+        eatProgress += dt * 2.8;
+
+        if (eatProgress < 1.2) {
+          // LIFT BAMBOO FROM IN FRONT OF CHEST DIRECTLY TO MOUTH
+          const t = eatProgress / 1.2;
+          handsHoldingGroup.position.set(
+            THREE.MathUtils.lerp(0, 0, t),
+            THREE.MathUtils.lerp(0.7, 1.1, t),
+            THREE.MathUtils.lerp(1.05, 0.85, t)
+          );
+          handsHoldingGroup.rotation.set(
+            THREE.MathUtils.lerp(0, 0.45, t),
+            THREE.MathUtils.lerp(0, -0.2, t),
+            THREE.MathUtils.lerp(0, 0.25, t)
+          );
+        } else if (eatProgress >= 1.2 && eatProgress < 7.0) {
+          // CHEWING & MUNCHING LOOP
+          const chew = Math.sin((eatProgress - 1.2) * 16);
+          const munch = Math.abs(chew);
+
+          // Paws feed upper bamboo into the mouth
+          handsHoldingGroup.position.y = 1.1 + chew * 0.04;
+          handsHoldingGroup.position.z = 0.85 + chew * 0.03;
+
+          // Mouth chomps
+          mouthGroup.position.y = -0.1 - munch * 0.08;
+          mouthGroup.scale.set(1 + munch * 0.15, 1 - munch * 0.1, 1);
+
+          // Head bobs
+          headGroup.rotation.x = chew * 0.07;
+          headGroup.rotation.z = Math.cos((eatProgress - 1.2) * 8) * 0.04;
+
+          if (Math.random() < 0.35) {
+            spawnCrumb();
+          }
+        } else if (eatProgress >= 7.0 && eatProgress < 8.4) {
+          // LOWER BAMBOO BACK DOWN
+          const t = (eatProgress - 7.0) / 1.4;
+          handsHoldingGroup.position.set(
+            THREE.MathUtils.lerp(0, 0, t),
+            THREE.MathUtils.lerp(1.1, 0.7, t),
+            THREE.MathUtils.lerp(0.85, 1.05, t)
+          );
+          handsHoldingGroup.rotation.set(
+            THREE.MathUtils.lerp(0.45, 0, t),
+            THREE.MathUtils.lerp(-0.2, 0, t),
+            THREE.MathUtils.lerp(0.25, 0, t)
+          );
+
+          headGroup.rotation.set(0, 0, 0);
+          mouthGroup.position.set(0, -0.1, 0.6);
+          mouthGroup.scale.set(1, 1, 1);
+        } else {
+          isEating = false;
+        }
+      } else {
+        // Idle gentle breathing animation
+        headGroup.position.y = 1.6 + Math.sin(time * 2) * 0.015;
+        body.scale.set(1 + Math.sin(time * 2) * 0.01, 1.1, 0.95);
+        handsHoldingGroup.position.y = 0.7 + Math.sin(time * 2) * 0.01;
+      }
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
